@@ -25,6 +25,15 @@
 <p>AAの横の文字数 <input type="text" id="char_num" size="10" value="200"></p>
 <p>使用文字 (半角文字のみ) <input type="text" id="ascii" size="100"></p>
 <p><input type="button" onclick="on_click();" value="変換" style="width:100px;font-size:30px;"></p>
+<!-- カメラ用（非表示） -->
+<video id="cam" autoplay playsinline style="display:none"></video>
+
+<!-- カメラ操作UI -->
+<p>
+ <button id="startCam">カメラ開始</button>
+ <button id="stopCam">カメラ停止</button>
+ FPS: <input id="fps" type="number" min="1" max="30" value="3" style="width:60px">
+</p>
 
 <h2>画像</h2>
 <p><canvas width="1" height="1" id="image_canvas"></canvas> <canvas width="1" height="1" id="aa_canvas"></canvas></p>
@@ -104,6 +113,104 @@ function on_click(){
 	img.src = image_canvas.toDataURL();
 
 
+}
+// ---- カメラから連続AA変換 ----
+const video = document.getElementById('cam');
+let camStream = null;
+let camRunning = false;
+let lastTs = 0;
+
+document.getElementById('startCam').addEventListener('click', startCamera);
+document.getElementById('stopCam').addEventListener('click', stopCamera);
+
+async function startCamera() {
+  if (camRunning) return;
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    video.srcObject = camStream;
+    await video.play();
+    camRunning = true;
+    lastTs = performance.now();
+    requestAnimationFrame(processLoop);
+    console.log("カメラ開始");
+  } catch (err) {
+    console.error("カメラ取得エラー:", err);
+    alert("カメラを取得できませんでした。許可と接続を確認してください。");
+  }
+}
+
+function stopCamera() {
+  if (!camRunning) return;
+  camRunning = false;
+  if (camStream) {
+    camStream.getTracks().forEach(t => t.stop());
+    camStream = null;
+  }
+  console.log("カメラ停止");
+}
+
+function processLoop(ts) {
+  if (!camRunning) return;
+  const fps = Math.max(1, Number(document.getElementById('fps').value) || 3);
+  const interval = 1000 / fps;
+  if (ts - lastTs >= interval) {
+    lastTs = ts;
+    processFrameOnce();
+  }
+  requestAnimationFrame(processLoop);
+}
+
+function processFrameOnce() {
+  // video -> image_canvas に描画
+  const image_canvas = document.getElementById("image_canvas");
+  if (!video.videoWidth || !video.videoHeight) return;
+
+  image_canvas.width = video.videoWidth;
+  image_canvas.height = video.videoHeight;
+  const ctx = image_canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, image_canvas.width, image_canvas.height);
+
+  // 既存の img2pixel/toAA を使うため、一度 dataURL -> Image に戻す（簡潔だが遅め）
+  const dataUrl = image_canvas.toDataURL();
+  const img = new Image();
+  img.onload = function() {
+    try {
+      const char_num = Number(document.getElementById('char_num').value) || 200;
+      const characters = document.getElementById('ascii').value;
+      const fontsize = 32; // character_density に合わせて必要なら調整
+      const c_vals = character_density(characters, fontsize);
+
+      // 画像→ピクセル→AA
+      const pixel = img2pixel(img, char_num);            // aa.jsに依存
+      const AA = toAA(pixel, 2, characters, c_vals);     // aa.jsに依存
+
+      // 出力
+      const output = document.getElementById('output');
+      output.value = AA;
+      output.cols = char_num + Math.ceil(char_num * 0.1);
+      output.rows = Math.ceil(AA.length / char_num) + 5;
+		
+	  /*
+	  // ここでクリップボードにコピー
+        navigator.clipboard.writeText(output.value)
+            .then(() => {
+                console.log("AAをクリップボードにコピーしました");
+            })
+            .catch(err => {
+                console.error("コピーに失敗しました", err);
+            });
+			*/
+      // AAを画像化（任意。重い場合はコメントアウト）
+    //   const aa_canvas = document.getElementById("aa_canvas");
+    //   AA2img(aa_canvas, AA, fontsize);
+
+      // クリップボードにコピーしたいなら有効化（ユーザー操作のあるときのみ確実）
+      // navigator.clipboard.writeText(AA).catch(()=>{});
+    } catch (e) {
+      console.error("AA変換エラー:", e);
+    }
+  };
+  img.src = dataUrl;
 }
 
 
