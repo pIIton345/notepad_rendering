@@ -1,0 +1,13 @@
+venv
+
+./GPT-AA/image/
+
+./GPT-AA/out.txt
+
+./GPT-AA/output.txt
+
+
+*.txt
+*.png
+*.jpg
+*.mp4
