@@ -2,9 +2,13 @@ import os
 import time
 import win32gui
 import win32con
-
+import argparse
 # ここをあなたのファイルに合わせて
-FILE = r"C:\Users\plasy\Documents\notepad-rendering\GPT-AA\out.txt"
+parser = argparse.ArgumentParser()
+parser.add_argument("file", help="Path to the text file")
+args = parser.parse_args()
+
+FILE = args.file
 TITLE_HINT = os.path.basename(FILE)  # "output.txt"
 
 def find_edit_child(parent_hwnd):

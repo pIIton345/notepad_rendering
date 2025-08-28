@@ -2,10 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import argparse
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageEnhance
 import numpy as np
 
-def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False):
+def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False, brightness=1.0):
     """グレースケールASCIIアート生成"""
     if charset is None:
         charset = " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
@@ -15,6 +15,12 @@ def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False):
     if invert:
         img = ImageOps.invert(img)
 
+    # 明度補正
+    if brightness != 1.0:
+        enhancer = ImageEnhance.Brightness(img)
+        img = enhancer.enhance(brightness)
+
+    # コントラスト補正
     if contrast != 1.0:
         arr = np.asarray(img).astype(np.float32) / 255.0
         mean = arr.mean()
@@ -34,7 +40,7 @@ def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False):
     lines = ["".join(row) for row in mapped]
     return "\n".join(lines)
 
-def to_ascii_color(image, width=120, char_colors=None):
+def to_ascii_color(image, width=120, char_colors=None, brightness=1.0):
     """カラー画像 → 指定色に近い文字でASCII化"""
     aspect = 0.5
     if char_colors is None:
@@ -44,6 +50,11 @@ def to_ascii_color(image, width=120, char_colors=None):
 
     # RGBA画像の場合もRGBに変換
     img = image.convert("RGB")
+
+    # 明度補正
+    if brightness != 1.0:
+        enhancer = ImageEnhance.Brightness(img)
+        img = enhancer.enhance(brightness)
 
     w, h = img.size
     new_w = width
@@ -74,13 +85,14 @@ def main():
     p.add_argument("--contrast", type=float, default=1.0, help="contrast multiplier")
     p.add_argument("--invert", action="store_true", help="invert brightness mapping")
     p.add_argument("--color", action="store_true", help="enable color-based ASCII")
+    p.add_argument("--brightness", type=float, default=1.0, help="brightness multiplier (default=1.0)")
     args = p.parse_args()
 
     img = Image.open(args.input)
 
     if args.color:
         # 文字と色のマッピング例（自由に追加可能）
-        A= '1234567890-^qwertyuiop@[asdfghjkl\\;:]zxcvbnm,./!"#$%&\'()=~|QWERTYUIOP`{ASDFGHJKL+*}ZXCVBNM<>?_' 
+        A= '1234567890-^qwertyuiop@[asdfghjkl\\;:]zxcvbnm,./!"#$%&\'()=~|QWERTYUIOP`{ASDFGHJKL+*}ZXCVBNM<>?_'
         char_colors = [
             (" ", (255,255,255)),("1", (219,219,219)),("2", (219,219,219)),("3", (200,200,219)),
             ("4", (182,191,191)),("5", (200,200,200)),("6", (200,200,200)),("7", (200,219,219)),
@@ -94,23 +106,23 @@ def main():
             (':', (255,255,255)),(']', (219,219,219)),("z", (237,218,237)),("x", (218,218,199)),
             ("c", (237,218,218)),("v", (218,218,218)),("b", (200,200,200)),("n", (218,218,218)),
             ("m", (199,199,199)),(",", (255,255,255)),(".", (255,255,255)),("/", (219,219,219)),
-            ("!", (219,219,200)),('"', (237,237,218)),("#", (163,163,163)),("$", (181,163,181)),
-            ("&", (181,181,181)),("\'", (237,237,237)),("(", (219,219,219)),(")", (219,219,219)),
+            ("!", (219,219,200)),("\"", (237,237,218)),("#", (163,163,163)),("$", (181,163,181)),
+            ("&", (181,181,181)),("'", (237,237,237)),("(", (219,219,219)),(")", (219,219,219)),
             ("=", (199,218,199)),("~", (218,237,237)),("|", (219,219,219)),("Q", (160,160,160)),
-            ("W", (255,255,255)),("E", (219,200,182)),('R', (181,163,163)),('S', (181,181,181)),#Wは144,144,144だけど色がつよすぎる
+            ("W", (255,255,255)),("E", (219,200,182)),('R', (181,163,163)),('S', (181,181,181)),
             ('T', (219,219,219)),('Y', (182,182,182)),('U', (182,200,182)),('I', (200,200,182)),
             ('O', (160,181,160)),('P', (200,182,182)),('`', (255,219,219)),('{', (219,219,219)),
             ('A', (181,181,181)),('S', (181,181,181)),('D', (200,182,182)),('F', (182,182,182)),
             ('G', (181,181,200)),('H', (182,200,182)),('J', (200,200,200)),('K', (182,182,182)),
             ('L', (219,219,219)),('+', (199,218,199)),('*', (199,199,199)),('}', (219,219,219)),
             ('Z', (200,200,219)),('X', (182,182,182)),('C', (200,200,200)),('V', (182,200,182)),
-            ('B', (200,182,182)),('N', (163,181,163)),('M', (255,255,255)),('<', (219,219,200)),#Mは142,142,142
+            ('B', (200,182,182)),('N', (163,181,163)),('M', (255,255,255)),('<', (219,219,200)),
             ('>', (200,219,219)),('?', (219,219,219)),('_', (255,255,255)),("█", (29,29,0)),
         ]
-        art = to_ascii_color(img, width=args.width, char_colors=char_colors)
+        art = to_ascii_color(img, width=args.width, char_colors=char_colors, brightness=args.brightness)
     else:
         art = to_ascii_gray(img, width=args.width, charset=args.charset,
-                            contrast=args.contrast, invert=args.invert)
+                            contrast=args.contrast, invert=args.invert, brightness=args.brightness)
 
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(art)

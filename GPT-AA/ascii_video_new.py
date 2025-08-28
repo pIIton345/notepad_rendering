@@ -35,6 +35,7 @@ def parse_args():
     p.add_argument("--color", action="store_true", help="Enable color-based ASCII")
     p.add_argument("--resize-algo", choices=["bilinear", "bicubic", "nearest"], default="bilinear",
                    help="Resize algorithm (bilinear faster than bicubic)")
+    p.add_argument("--brightness", type=float, default=1.0, help="Input brightness multiplier (applied before conversion)")
     return p.parse_args()
 
 # ---- helpers for cv2 <-> ascii ----
@@ -88,9 +89,20 @@ def color_array_to_ascii_lines(img_rgb_float, char_array, color_array):
 
 # ---- conversion functions that use cv2 (fast) ----
 def frame_bgr_to_ascii_fast(frame_bgr, width, charset, contrast, invert, use_color,
-                            char_array=None, color_array=None, resize_inter=cv2.INTER_LINEAR):
+                            char_array=None, color_array=None, resize_inter=cv2.INTER_LINEAR, brightness=1.0):
     # frame_bgr: cv2 BGR image (H, W, 3) uint8
+    # brightness: multiplier applied to input frame before any conversion
     h0, w0 = frame_bgr.shape[:2]
+
+    # apply brightness multiplier early (on original resolution for better results)
+    if brightness != 1.0:
+        try:
+            # use float computation then clip back to uint8
+            frame_bgr = np.clip(frame_bgr.astype(np.float32) * float(brightness), 0, 255).astype(np.uint8)
+        except Exception:
+            # fallback: if unexpected dtype, try safe path
+            frame_bgr = cv2.convertScaleAbs(frame_bgr, alpha=float(brightness), beta=0)
+
     aspect_ratio = 0.5  # character height/width ratio
     nh = max(1, int(h0 * (width / w0) * aspect_ratio))
     # resize using cv2 (fast)
@@ -119,7 +131,7 @@ def reader_thread(cap, frame_queue: queue.Queue, stop_event, read_info):
         frame_queue.put(SENTINEL)
 
 def worker_thread(frame_queue: queue.Queue, ascii_buffer: dict, buf_lock: threading.Lock, buf_cond: threading.Condition,
-                  width, charset, contrast, invert, stop_event, use_color, char_array, color_array, resize_inter):
+                  width, charset, contrast, invert, stop_event, use_color, char_array, color_array, resize_inter, brightness):
     while not stop_event.is_set():
         item = frame_queue.get()
         try:
@@ -129,7 +141,7 @@ def worker_thread(frame_queue: queue.Queue, ascii_buffer: dict, buf_lock: thread
             frame_id, frame = item
             try:
                 ascii_str = frame_bgr_to_ascii_fast(frame, width, charset, contrast, invert,
-                                                    use_color, char_array, color_array, resize_inter)
+                                                    use_color, char_array, color_array, resize_inter, brightness)
             except Exception as e:
                 print(f"[worker error] frame {frame_id}: {e}", file=sys.stderr)
                 ascii_str = f"[ERROR converting frame {frame_id}: {e}]"
@@ -199,7 +211,7 @@ def camera_loop(cap, args, charset, out_width, frame_interval, char_array, color
             if not ret:
                 break
             ascii_str = frame_bgr_to_ascii_fast(frame, out_width, charset, args.contrast, args.invert,
-                                               args.color, char_array, color_array, resize_inter)
+                                               args.color, char_array, color_array, resize_inter, args.brightness)
             tmp_path = args.output + ".tmp"
             with open(tmp_path, "w", encoding="utf-8") as f:
                 f.write(ascii_str)
@@ -291,7 +303,7 @@ def main():
         t = threading.Thread(target=worker_thread,
                              args=(frame_queue, ascii_buffer, buf_lock, buf_cond,
                                    out_width, charset, args.contrast, args.invert,
-                                   stop_event, args.color, char_array, color_array, resize_inter),
+                                   stop_event, args.color, char_array, color_array, resize_inter, args.brightness),
                              daemon=True)
         t.start()
         workers.append(t)
