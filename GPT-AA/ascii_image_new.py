@@ -4,6 +4,42 @@
 import argparse
 from PIL import Image, ImageOps, ImageEnhance
 import numpy as np
+import sys
+
+def apply_outo_rgb(img, gamma=0.7, exposure=0.5):
+    """
+    カラー画像用のアウトオート（暗部持ち上げ + ハイライト圧縮）
+    - gamma < 1 : 暗部を持ち上げる
+    - exposure (0..1) : 値が小さいほどハイライト圧縮が強くなる（0.5 程度が無難）
+    処理は HSV の V チャネルに対して行う。
+    """
+    hsv = img.convert("HSV")
+    arr = np.asarray(hsv).astype(np.float32)
+    h = arr[..., 0]
+    s = arr[..., 1]
+    v = arr[..., 2] / 255.0
+
+    # ガンマで暗部を持ち上げ
+    v = np.power(v, gamma)
+
+    # ソフトトーンマッピング（ハイライトの伸びを抑える）
+    # v -> v/(v + exposure) (exposure は 0.1..1.0 の範囲が有効)
+    v = v / (v + exposure)
+    v = np.clip(v, 0.0, 1.0)
+
+    arr[..., 2] = (v * 255.0).astype(np.float32)
+    out = Image.fromarray(arr.astype(np.uint8), mode="HSV").convert("RGB")
+    return out
+
+def apply_outo_gray(img, gamma=0.7, exposure=0.5):
+    """
+    グレースケール画像用のアウトオート
+    """
+    arr = np.asarray(img).astype(np.float32) / 255.0
+    arr = np.power(arr, gamma)
+    arr = arr / (arr + exposure)
+    arr = np.clip(arr, 0.0, 1.0)
+    return Image.fromarray((arr * 255.0).astype(np.uint8))
 
 def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False, brightness=1.0):
     """グレースケールASCIIアート生成"""
@@ -20,7 +56,7 @@ def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False, br
         enhancer = ImageEnhance.Brightness(img)
         img = enhancer.enhance(brightness)
 
-    # コントラスト補正
+    # コントラスト補正（ピクセル単位で平均を保つ方式）
     if contrast != 1.0:
         arr = np.asarray(img).astype(np.float32) / 255.0
         mean = arr.mean()
@@ -44,11 +80,9 @@ def to_ascii_color(image, width=120, char_colors=None, brightness=1.0):
     """カラー画像 → 指定色に近い文字でASCII化"""
     aspect = 0.5
     if char_colors is None:
-        # デフォルト: 白黒文字
         char_colors = [(c, (i,i,i)) for i, c in enumerate(
             " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$")]
 
-    # RGBA画像の場合もRGBに変換
     img = image.convert("RGB")
 
     # 明度補正
@@ -76,8 +110,37 @@ def to_ascii_color(image, width=120, char_colors=None, brightness=1.0):
         lines.append(line)
     return "\n".join(lines)
 
+def build_default_char_colors():
+    # 元のリストを軽く修正（不正な値を修正）
+    return [
+        (" ", (255,255,255)),("1", (219,219,219)),("2", (219,219,219)),("3", (200,200,219)),
+        ("4", (182,191,191)),("5", (200,200,200)),("6", (200,200,200)),("7", (200,219,219)),
+        ("8", (181,181,181)),("9", (200,200,181)),("0", (200,200,200)),("-", (213,213,213)),
+        ("^", (237,237,237)),("q", (199,199,218)),("w", (178,178,178)),("e", (200,200,200)),
+        ("r", (237,218,218)),("t", (237,218,237)),("y", (218,218,218)),("u", (218,218,218)),
+        ("i", (237,237,219)),("o", (199,199,199)),("p", (218,218,218)),("@", (160,163,160)),
+        ('[', (219,219,219)),('a', (199,199,199)),('s', (199,218,199)),('d', (181,181,200)),
+        ('f', (219,219,219)),('g', (199,199,199)),('h', (200,199,200)),('j', (236,236,219)),
+        ('k', (181,200,200)),('l', (237,219,219)),('\\', (163,181,163)),(';', (255,255,255)),
+        (':', (255,255,255)),(']', (219,219,219)),("z", (237,218,237)),("x", (218,218,199)),
+        ("c", (237,218,218)),("v", (218,218,218)),("b", (200,200,200)),("n", (218,218,218)),
+        ("m", (199,199,199)),(",", (255,255,255)),(".", (255,255,255)),("/", (219,219,219)),
+        ("!", (219,219,200)),("\"", (237,237,218)),("#", (163,163,163)),("$", (181,163,181)),
+        ("&", (181,181,181)),("'", (237,237,237)),("(", (219,219,219)),(")", (219,219,219)),
+        ("=", (199,218,199)),("~", (218,237,237)),("|", (219,219,219)),("Q", (160,160,160)),
+        ("W", (255,255,255)),("E", (219,200,182)),('R', (181,163,163)),('S', (181,181,181)),
+        ('T', (219,219,219)),('Y', (182,182,182)),('U', (182,200,182)),('I', (200,200,182)),
+        ('O', (160,181,160)),('P', (200,182,182)),('`', (255,219,219)),('{', (219,219,219)),
+        ('A', (181,181,181)),('D', (200,182,182)),('F', (182,182,182)),('G', (181,181,200)),
+        ('H', (182,200,182)),('J', (200,200,200)),('K', (182,182,182)),('L', (219,219,219)),
+        ('+', (199,218,199)),('*', (199,199,199)),('}', (219,219,219)),('Z', (200,200,219)),
+        ('X', (182,182,182)),('C', (200,200,200)),('V', (182,200,182)),('B', (200,182,182)),
+        ('N', (163,181,163)),('M', (255,255,255)),('<', (219,219,200)),('>', (200,219,219)),
+        ('?', (219,219,219)),('_', (255,255,255)),("█", (29,29,0)),
+    ]
+
 def main():
-    p = argparse.ArgumentParser()
+    p = argparse.ArgumentParser(description="Image -> ASCII (grayscale or color) with --outo shadow/highlight auto-correct")
     p.add_argument("input", help="input image")
     p.add_argument("output", help="output text file")
     p.add_argument("--width", type=int, default=120, help="output width in characters")
@@ -86,39 +149,31 @@ def main():
     p.add_argument("--invert", action="store_true", help="invert brightness mapping")
     p.add_argument("--color", action="store_true", help="enable color-based ASCII")
     p.add_argument("--brightness", type=float, default=1.0, help="brightness multiplier (default=1.0)")
+    p.add_argument("--outo", action="store_true", help="auto adjust shadows/highlights (avoid white clipping)")
+    p.add_argument("--gamma", type=float, default=0.7, help="gamma used by --outo (default 0.7, <1 lifts shadows)")
+    p.add_argument("--exposure", type=float, default=0.5, help="exposure-like parameter for --outo tone-mapping (default 0.5)")
     args = p.parse_args()
 
-    img = Image.open(args.input)
+    try:
+        img = Image.open(args.input)
+    except Exception as e:
+        print("Error: cannot open input:", e, file=sys.stderr)
+        sys.exit(1)
 
+    # --- outo が指定されたら適用（カラー/グレース別） ---
+    if args.outo:
+        if args.color:
+            img = apply_outo_rgb(img.convert("RGB"), gamma=args.gamma, exposure=args.exposure)
+        else:
+            # グレースケール版: convert してから処理
+            gray = img.convert("L")
+            gray = apply_outo_gray(gray, gamma=args.gamma, exposure=args.exposure)
+            # keep original as RGB if later color branch requested; here convert back to original mode
+            img = gray.convert("L")
+
+    # 以降は brightness/contrast 等の既存フローに渡す
     if args.color:
-        # 文字と色のマッピング例（自由に追加可能）
-        A= '1234567890-^qwertyuiop@[asdfghjkl\\;:]zxcvbnm,./!"#$%&\'()=~|QWERTYUIOP`{ASDFGHJKL+*}ZXCVBNM<>?_'
-        char_colors = [
-            (" ", (255,255,255)),("1", (219,219,219)),("2", (219,219,219)),("3", (200,200,219)),
-            ("4", (182,191,191)),("5", (200,200,200)),("6", (200,200,200)),("7", (200,219,219)),
-            ("8", (181,181,181)),("9", (200,200,181)),("0", (200,200,200)),("-", (213,213,213)),
-            ("^", (237,237,237)),("q", (199,199,218)),("w", (178,178,178)),("e", (200,200,200)),
-            ("r", (237,218,218)),("t", (237,218,237)),("y", (218,218,218)),("u", (218,218,218)),
-            ("i", (237,237,219)),("o", (199,199,199)),("p", (218,218,218)),("@", (160,163,160)),
-            ('[', (219,219,219)),('a', (199,199,199)),('s', (199,218,199)),('d', (181,181,200)),
-            ('f', (219,219,219)),('g', (199,199,199)),('h', (200,299,200)),('j', (236,236,219)),
-            ('k', (181,200,200)),('l', (237,219,219)),('\\', (163,181,163)),(';', (255,255,255)),
-            (':', (255,255,255)),(']', (219,219,219)),("z", (237,218,237)),("x", (218,218,199)),
-            ("c", (237,218,218)),("v", (218,218,218)),("b", (200,200,200)),("n", (218,218,218)),
-            ("m", (199,199,199)),(",", (255,255,255)),(".", (255,255,255)),("/", (219,219,219)),
-            ("!", (219,219,200)),("\"", (237,237,218)),("#", (163,163,163)),("$", (181,163,181)),
-            ("&", (181,181,181)),("'", (237,237,237)),("(", (219,219,219)),(")", (219,219,219)),
-            ("=", (199,218,199)),("~", (218,237,237)),("|", (219,219,219)),("Q", (160,160,160)),
-            ("W", (255,255,255)),("E", (219,200,182)),('R', (181,163,163)),('S', (181,181,181)),
-            ('T', (219,219,219)),('Y', (182,182,182)),('U', (182,200,182)),('I', (200,200,182)),
-            ('O', (160,181,160)),('P', (200,182,182)),('`', (255,219,219)),('{', (219,219,219)),
-            ('A', (181,181,181)),('S', (181,181,181)),('D', (200,182,182)),('F', (182,182,182)),
-            ('G', (181,181,200)),('H', (182,200,182)),('J', (200,200,200)),('K', (182,182,182)),
-            ('L', (219,219,219)),('+', (199,218,199)),('*', (199,199,199)),('}', (219,219,219)),
-            ('Z', (200,200,219)),('X', (182,182,182)),('C', (200,200,200)),('V', (182,200,182)),
-            ('B', (200,182,182)),('N', (163,181,163)),('M', (255,255,255)),('<', (219,219,200)),
-            ('>', (200,219,219)),('?', (219,219,219)),('_', (255,255,255)),("█", (29,29,0)),
-        ]
+        char_colors = build_default_char_colors()
         art = to_ascii_color(img, width=args.width, char_colors=char_colors, brightness=args.brightness)
     else:
         art = to_ascii_gray(img, width=args.width, charset=args.charset,

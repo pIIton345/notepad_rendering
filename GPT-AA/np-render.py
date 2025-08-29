@@ -3,21 +3,22 @@ import time
 import win32gui
 import win32con
 import argparse
-# ここをあなたのファイルに合わせて
+
+# 引数処理
 parser = argparse.ArgumentParser()
 parser.add_argument("file", help="Path to the text file")
+parser.add_argument("--fps", type=float, default=30.0,
+                    help="監視間隔 (1秒あたりの更新チェック回数, default=30)")
 args = parser.parse_args()
 
 FILE = args.file
-TITLE_HINT = os.path.basename(FILE)  # "output.txt"
+TITLE_HINT = os.path.basename(FILE)
 
 def find_edit_child(parent_hwnd):
-    # まずはクラシック Notepad の "Edit" を探す
     h = win32gui.FindWindowEx(parent_hwnd, 0, "Edit", None)
     if h:
         return h
 
-    # Windows 11 の新しい Notepad では "RichEditD2DPT" なことがある
     target = []
     def enum_child(hwnd, _):
         cls = win32gui.GetClassName(hwnd)
@@ -41,7 +42,6 @@ def find_notepad_edit_for(title_hint):
     return edit_hwnd
 
 def push_text_to_notepad(edit_hwnd, text):
-    # Edit コントロールは WM_SETTEXT で内容が置き換わる
     win32gui.SendMessage(edit_hwnd, win32con.WM_SETTEXT, 0, text)
 
 def main():
@@ -51,6 +51,7 @@ def main():
         return
 
     last_mtime = None
+    interval = 1.0 / args.fps if args.fps > 0 else 0.1  # fps=0回避
     while True:
         try:
             mtime = os.path.getmtime(FILE)
@@ -61,6 +62,7 @@ def main():
                 push_text_to_notepad(edit, text)
         except Exception as e:
             print("error:", e)
-        time.sleep(1/30)  # 5回/秒くらいで監視
+        time.sleep(interval)
+
 if __name__ == "__main__":
     main()
