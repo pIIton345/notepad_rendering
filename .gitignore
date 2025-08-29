@@ -1,10 +1,10 @@
 venv
 
-./GPT-AA/image/
+./src/image/
 
-./GPT-AA/out.txt
+./src/out.txt
 
-./GPT-AA/output.txt
+./src/output.txt
 
 
 *.txt
