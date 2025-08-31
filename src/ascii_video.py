@@ -39,6 +39,8 @@ def parse_args():
     # New options for white-preserving adaptive brightness
     p.add_argument("--outo", action="store_true", help="Preserve highlights when increasing brightness (adaptive per-pixel; prevents white clipping)")
     p.add_argument("--outo-gamma", type=float, default=1.0, help="Gamma for --outo curve (0.5..2.0 typical). Lower -> stronger lift for darkest pixels")
+    p.add_argument("--aspect", type=float, default=0.5,
+                   help="character aspect ratio (height/width). >0.5 makes characters taller, <0.5 squashes vertically. default=0.5")
     return p.parse_args()
 
 # ---- helpers for cv2 <-> ascii ----
@@ -93,10 +95,11 @@ def color_array_to_ascii_lines(img_rgb_float, char_array, color_array):
 # ---- conversion functions that use cv2 (fast) ----
 def frame_bgr_to_ascii_fast(frame_bgr, width, charset, contrast, invert, use_color,
                             char_array=None, color_array=None, resize_inter=cv2.INTER_LINEAR,
-                            brightness=1.0, outo=False, outo_gamma=1.0):
+                            brightness=1.0, outo=False, outo_gamma=1.0, aspect=0.5):
     # frame_bgr: cv2 BGR image (H, W, 3) uint8
     # brightness: multiplier applied to input frame before any conversion
     # outo: if True and brightness>1.0, apply per-pixel adaptive factor to protect highlights
+    # aspect: character height/width ratio
     h0, w0 = frame_bgr.shape[:2]
 
     # --- 明度補正（白飛び抑制オプション --outo） ---
@@ -121,8 +124,8 @@ def frame_bgr_to_ascii_fast(frame_bgr, width, charset, contrast, invert, use_col
             # 安全フォールバック
             frame_bgr = cv2.convertScaleAbs(frame_bgr, alpha=float(brightness), beta=0)
 
-    aspect_ratio = 0.5  # character height/width ratio
-    nh = max(1, int(h0 * (width / w0) * aspect_ratio))
+    # use provided aspect (character height/width)
+    nh = max(1, int(h0 * (width / w0) * float(aspect)))
     # resize using cv2 (fast)
     small = cv2.resize(frame_bgr, (width, nh), interpolation=resize_inter)
     if use_color:
@@ -149,7 +152,7 @@ def reader_thread(cap, frame_queue: queue.Queue, stop_event, read_info):
         frame_queue.put(SENTINEL)
 
 def worker_thread(frame_queue: queue.Queue, ascii_buffer: dict, buf_lock: threading.Lock, buf_cond: threading.Condition,
-                  width, charset, contrast, invert, stop_event, use_color, char_array, color_array, resize_inter, brightness, outo, outo_gamma):
+                  width, charset, contrast, invert, stop_event, use_color, char_array, color_array, resize_inter, brightness, outo, outo_gamma, aspect):
     while not stop_event.is_set():
         item = frame_queue.get()
         try:
@@ -160,7 +163,7 @@ def worker_thread(frame_queue: queue.Queue, ascii_buffer: dict, buf_lock: thread
             try:
                 ascii_str = frame_bgr_to_ascii_fast(frame, width, charset, contrast, invert,
                                                     use_color, char_array, color_array, resize_inter,
-                                                    brightness, outo, outo_gamma)
+                                                    brightness, outo, outo_gamma, aspect)
             except Exception as e:
                 print(f"[worker error] frame {frame_id}: {e}", file=sys.stderr)
                 ascii_str = f"[ERROR converting frame {frame_id}: {e}]"
@@ -222,7 +225,7 @@ def writer_thread(output_path, ascii_buffer: dict, buf_lock: threading.Lock, buf
     stop_event.set()
 
 # ---- camera realtime loop ----
-def camera_loop(cap, args, charset, out_width, frame_interval, char_array, color_array, resize_inter):
+def camera_loop(cap, args, charset, out_width, frame_interval, char_array, color_array, resize_inter, aspect):
     try:
         while True:
             start_time = time.time()
@@ -231,7 +234,7 @@ def camera_loop(cap, args, charset, out_width, frame_interval, char_array, color
                 break
             ascii_str = frame_bgr_to_ascii_fast(frame, out_width, charset, args.contrast, args.invert,
                                                args.color, char_array, color_array, resize_inter,
-                                               args.brightness, args.outo, args.outo_gamma)
+                                               args.brightness, args.outo, args.outo_gamma, aspect)
             tmp_path = args.output + ".tmp"
             with open(tmp_path, "w", encoding="utf-8") as f:
                 f.write(ascii_str)
@@ -301,7 +304,7 @@ def main():
     if is_camera:
         print("[mode] camera realtime")
         try:
-            camera_loop(cap, args, charset, out_width, frame_interval, char_array, color_array, resize_inter)
+            camera_loop(cap, args, charset, out_width, frame_interval, char_array, color_array, resize_inter, args.aspect)
         except KeyboardInterrupt:
             pass
         print("\n[Done] camera stopped.")
@@ -324,7 +327,7 @@ def main():
                              args=(frame_queue, ascii_buffer, buf_lock, buf_cond,
                                    out_width, charset, args.contrast, args.invert,
                                    stop_event, args.color, char_array, color_array, resize_inter,
-                                   args.brightness, args.outo, args.outo_gamma),
+                                   args.brightness, args.outo, args.outo_gamma, args.aspect),
                              daemon=True)
         t.start()
         workers.append(t)

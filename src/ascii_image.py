@@ -34,19 +34,18 @@ def apply_outo_rgb(img, gamma=0.7, exposure=0.5):
 def apply_outo_gray(img, gamma=0.7, exposure=0.5):
     """
     グレースケール画像用のアウトオート
+    入力は 'L' モードの Image を想定
     """
     arr = np.asarray(img).astype(np.float32) / 255.0
     arr = np.power(arr, gamma)
     arr = arr / (arr + exposure)
     arr = np.clip(arr, 0.0, 1.0)
-    return Image.fromarray((arr * 255.0).astype(np.uint8))
+    return Image.fromarray((arr * 255.0).astype(np.uint8)).convert("L")
 
-def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False, brightness=1.0):
+def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False, brightness=1.0, aspect=0.5):
     """グレースケールASCIIアート生成"""
     if charset is None:
         charset = " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
-    aspect = 0.5  # 文字縦横比補正
-
     img = image.convert("L")
     if invert:
         img = ImageOps.invert(img)
@@ -62,10 +61,11 @@ def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False, br
         mean = arr.mean()
         arr = (arr - mean) * contrast + mean
         arr = np.clip(arr, 0.0, 1.0)
-        img = Image.fromarray((arr * 255).astype(np.uint8))
+        img = Image.fromarray((arr * 255).astype(np.uint8)).convert("L")
 
     w, h = img.size
-    new_w = width
+    new_w = max(1, int(width))
+    # 文字の縦横比補正を使用
     new_h = max(1, int(h / w * new_w * aspect))
     img = img.resize((new_w, new_h), Image.BICUBIC)
 
@@ -76,12 +76,10 @@ def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False, br
     lines = ["".join(row) for row in mapped]
     return "\n".join(lines)
 
-def to_ascii_color(image, width=120, char_colors=None, brightness=1.0):
+def to_ascii_color(image, width=120, char_colors=None, brightness=1.0, aspect=0.5):
     """カラー画像 → 指定色に近い文字でASCII化"""
-    aspect = 0.5
     if char_colors is None:
-        char_colors = [(c, (i,i,i)) for i, c in enumerate(
-            " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$")]
+        char_colors = build_default_char_colors()
 
     img = image.convert("RGB")
 
@@ -91,12 +89,13 @@ def to_ascii_color(image, width=120, char_colors=None, brightness=1.0):
         img = enhancer.enhance(brightness)
 
     w, h = img.size
-    new_w = width
+    new_w = max(1, int(width))
     new_h = max(1, int(h / w * new_w * aspect))
     img = img.resize((new_w, new_h), Image.BICUBIC)
     arr = np.asarray(img).astype(np.float32)
 
     lines = []
+    # char_colors は (char, (r,g,b)) のリストを想定
     char_array, color_array = zip(*char_colors)
     color_array = np.array(color_array, dtype=np.float32)
 
@@ -152,6 +151,8 @@ def main():
     p.add_argument("--outo", action="store_true", help="auto adjust shadows/highlights (avoid white clipping)")
     p.add_argument("--gamma", type=float, default=0.7, help="gamma used by --outo (default 0.7, <1 lifts shadows)")
     p.add_argument("--exposure", type=float, default=0.5, help="exposure-like parameter for --outo tone-mapping (default 0.5)")
+    p.add_argument("--aspect", type=float, default=0.5,
+                   help="character aspect ratio (height/width). >0.5 makes characters taller, <0.5 squashes vertically. default=0.5")
     args = p.parse_args()
 
     try:
@@ -168,19 +169,24 @@ def main():
             # グレースケール版: convert してから処理
             gray = img.convert("L")
             gray = apply_outo_gray(gray, gamma=args.gamma, exposure=args.exposure)
-            # keep original as RGB if later color branch requested; here convert back to original mode
-            img = gray.convert("L")
+            img = gray  # 'L' モードの Image
 
     # 以降は brightness/contrast 等の既存フローに渡す
     if args.color:
         char_colors = build_default_char_colors()
-        art = to_ascii_color(img, width=args.width, char_colors=char_colors, brightness=args.brightness)
+        art = to_ascii_color(img, width=args.width, char_colors=char_colors,
+                             brightness=args.brightness, aspect=args.aspect)
     else:
         art = to_ascii_gray(img, width=args.width, charset=args.charset,
-                            contrast=args.contrast, invert=args.invert, brightness=args.brightness)
+                            contrast=args.contrast, invert=args.invert,
+                            brightness=args.brightness, aspect=args.aspect)
 
-    with open(args.output, "w", encoding="utf-8") as f:
-        f.write(art)
+    try:
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(art)
+    except Exception as e:
+        print("Error: cannot write output:", e, file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
