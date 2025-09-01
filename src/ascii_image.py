@@ -45,7 +45,7 @@ def apply_outo_gray(img, gamma=0.7, exposure=0.5):
 def to_ascii_gray(image, width=120, charset=None, contrast=1.0, invert=False, brightness=1.0, aspect=0.5):
     """グレースケールASCIIアート生成"""
     if charset is None:
-        charset = " .'`^\",:;Il!i><~+_-?][}{1)(|\\/tfjrxnuvczXYUJCLQ0OZmwqpdbkhao*#MW&8%B@$"
+        charset = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\\\|()1{}[]?-_+~<>i!lI;:,\"^`'. "
     img = image.convert("L")
     if invert:
         img = ImageOps.invert(img)
