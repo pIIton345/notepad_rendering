@@ -37,8 +37,8 @@ def parse_args():
                    help="Resize algorithm (bilinear faster than bicubic)")
     p.add_argument("--brightness", type=float, default=1.0, help="Input brightness multiplier (applied before conversion)")
     # New options for white-preserving adaptive brightness
-    p.add_argument("--outo", action="store_true", help="Preserve highlights when increasing brightness (adaptive per-pixel; prevents white clipping)")
-    p.add_argument("--outo-gamma", type=float, default=1.0, help="Gamma for --outo curve (0.5..2.0 typical). Lower -> stronger lift for darkest pixels")
+    p.add_argument("--auto", action="store_true", help="Preserve highlights when increasing brightness (adaptive per-pixel; prevents white clipping)")
+    p.add_argument("--auto-gamma", type=float, default=1.0, help="Gamma for --auto curve (0.5..2.0 typical). Lower -> stronger lift for darkest pixels")
     p.add_argument("--aspect", type=float, default=0.5,
                    help="character aspect ratio (height/width). >0.5 makes characters taller, <0.5 squashes vertically. default=0.5")
     return p.parse_args()
@@ -95,17 +95,17 @@ def color_array_to_ascii_lines(img_rgb_float, char_array, color_array):
 # ---- conversion functions that use cv2 (fast) ----
 def frame_bgr_to_ascii_fast(frame_bgr, width, charset, contrast, invert, use_color,
                             char_array=None, color_array=None, resize_inter=cv2.INTER_LINEAR,
-                            brightness=1.0, outo=False, outo_gamma=1.0, aspect=0.5):
+                            brightness=1.0, auto=False, auto_gamma=1.0, aspect=0.5):
     # frame_bgr: cv2 BGR image (H, W, 3) uint8
     # brightness: multiplier applied to input frame before any conversion
-    # outo: if True and brightness>1.0, apply per-pixel adaptive factor to protect highlights
+    # auto: if True and brightness>1.0, apply per-pixel adaptive factor to protect highlights
     # aspect: character height/width ratio
     h0, w0 = frame_bgr.shape[:2]
 
-    # --- 明度補正（白飛び抑制オプション --outo） ---
+    # --- 明度補正（白飛び抑制オプション --auto） ---
     if brightness != 1.0:
         try:
-            if outo and brightness > 1.0:
+            if auto and brightness > 1.0:
                 # Lab の L チャネルを使って画素ごとに倍率を計算（ハイライト保護）
                 # OpenCV Lab: L in 0..255
                 lab = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2LAB).astype(np.float32)
@@ -113,7 +113,7 @@ def frame_bgr_to_ascii_fast(frame_bgr, width, charset, contrast, invert, use_col
                 L_norm = np.clip(L / 255.0, 0.0, 1.0)
                 # factor: 1.0 .. brightness  (L=255 -> 1, L=0 -> brightness)
                 # 使用式: factor = 1 + (brightness-1) * (1 - L_norm^gamma)
-                factor = 1.0 + (float(brightness) - 1.0) * (1.0 - np.power(L_norm, float(outo_gamma)))
+                factor = 1.0 + (float(brightness) - 1.0) * (1.0 - np.power(L_norm, float(auto_gamma)))
                 # expand and apply per-channel
                 factor = factor[:, :, None]  # (H,W,1)
                 frame_bgr = np.clip(frame_bgr.astype(np.float32) * factor, 0, 255).astype(np.uint8)
@@ -152,7 +152,7 @@ def reader_thread(cap, frame_queue: queue.Queue, stop_event, read_info):
         frame_queue.put(SENTINEL)
 
 def worker_thread(frame_queue: queue.Queue, ascii_buffer: dict, buf_lock: threading.Lock, buf_cond: threading.Condition,
-                  width, charset, contrast, invert, stop_event, use_color, char_array, color_array, resize_inter, brightness, outo, outo_gamma, aspect):
+                  width, charset, contrast, invert, stop_event, use_color, char_array, color_array, resize_inter, brightness, auto, auto_gamma, aspect):
     while not stop_event.is_set():
         item = frame_queue.get()
         try:
@@ -163,7 +163,7 @@ def worker_thread(frame_queue: queue.Queue, ascii_buffer: dict, buf_lock: thread
             try:
                 ascii_str = frame_bgr_to_ascii_fast(frame, width, charset, contrast, invert,
                                                     use_color, char_array, color_array, resize_inter,
-                                                    brightness, outo, outo_gamma, aspect)
+                                                    brightness, auto, auto_gamma, aspect)
             except Exception as e:
                 print(f"[worker error] frame {frame_id}: {e}", file=sys.stderr)
                 ascii_str = f"[ERROR converting frame {frame_id}: {e}]"
@@ -234,7 +234,7 @@ def camera_loop(cap, args, charset, out_width, frame_interval, char_array, color
                 break
             ascii_str = frame_bgr_to_ascii_fast(frame, out_width, charset, args.contrast, args.invert,
                                                args.color, char_array, color_array, resize_inter,
-                                               args.brightness, args.outo, args.outo_gamma, aspect)
+                                               args.brightness, args.auto, args.auto_gamma, aspect)
             tmp_path = args.output + ".tmp"
             with open(tmp_path, "w", encoding="utf-8") as f:
                 f.write(ascii_str)
@@ -327,7 +327,7 @@ def main():
                              args=(frame_queue, ascii_buffer, buf_lock, buf_cond,
                                    out_width, charset, args.contrast, args.invert,
                                    stop_event, args.color, char_array, color_array, resize_inter,
-                                   args.brightness, args.outo, args.outo_gamma, args.aspect),
+                                   args.brightness, args.auto, args.auto_gamma, args.aspect),
                              daemon=True)
         t.start()
         workers.append(t)

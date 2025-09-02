@@ -6,7 +6,7 @@ from PIL import Image, ImageOps, ImageEnhance
 import numpy as np
 import sys
 
-def apply_outo_rgb(img, gamma=0.7, exposure=0.5):
+def apply_auto_rgb(img, gamma=0.7, exposure=0.5):
     """
     カラー画像用のアウトオート（暗部持ち上げ + ハイライト圧縮）
     - gamma < 1 : 暗部を持ち上げる
@@ -31,7 +31,7 @@ def apply_outo_rgb(img, gamma=0.7, exposure=0.5):
     out = Image.fromarray(arr.astype(np.uint8), mode="HSV").convert("RGB")
     return out
 
-def apply_outo_gray(img, gamma=0.7, exposure=0.5):
+def apply_auto_gray(img, gamma=0.7, exposure=0.5):
     """
     グレースケール画像用のアウトオート
     入力は 'L' モードの Image を想定
@@ -139,7 +139,7 @@ def build_default_char_colors():
     ]
 
 def main():
-    p = argparse.ArgumentParser(description="Image -> ASCII (grayscale or color) with --outo shadow/highlight auto-correct")
+    p = argparse.ArgumentParser(description="Image -> ASCII (grayscale or color) with --auto shadow/highlight auto-correct")
     p.add_argument("input", help="input image")
     p.add_argument("output", help="output text file")
     p.add_argument("--width", type=int, default=120, help="output width in characters")
@@ -148,9 +148,9 @@ def main():
     p.add_argument("--invert", action="store_true", help="invert brightness mapping")
     p.add_argument("--color", action="store_true", help="enable color-based ASCII")
     p.add_argument("--brightness", type=float, default=1.0, help="brightness multiplier (default=1.0)")
-    p.add_argument("--outo", action="store_true", help="auto adjust shadows/highlights (avoid white clipping)")
-    p.add_argument("--gamma", type=float, default=0.7, help="gamma used by --outo (default 0.7, <1 lifts shadows)")
-    p.add_argument("--exposure", type=float, default=0.5, help="exposure-like parameter for --outo tone-mapping (default 0.5)")
+    p.add_argument("--auto", action="store_true", help="auto adjust shadows/highlights (avoid white clipping)")
+    p.add_argument("--gamma", type=float, default=0.7, help="gamma used by --auto (default 0.7, <1 lifts shadows)")
+    p.add_argument("--exposure", type=float, default=0.5, help="exposure-like parameter for --auto tone-mapping (default 0.5)")
     p.add_argument("--aspect", type=float, default=0.5,
                    help="character aspect ratio (height/width). >0.5 makes characters taller, <0.5 squashes vertically. default=0.5")
     args = p.parse_args()
@@ -161,14 +161,14 @@ def main():
         print("Error: cannot open input:", e, file=sys.stderr)
         sys.exit(1)
 
-    # --- outo が指定されたら適用（カラー/グレース別） ---
-    if args.outo:
+    # --- auto が指定されたら適用（カラー/グレース別） ---
+    if args.auto:
         if args.color:
-            img = apply_outo_rgb(img.convert("RGB"), gamma=args.gamma, exposure=args.exposure)
+            img = apply_auto_rgb(img.convert("RGB"), gamma=args.gamma, exposure=args.exposure)
         else:
             # グレースケール版: convert してから処理
             gray = img.convert("L")
-            gray = apply_outo_gray(gray, gamma=args.gamma, exposure=args.exposure)
+            gray = apply_auto_gray(gray, gamma=args.gamma, exposure=args.exposure)
             img = gray  # 'L' モードの Image
 
     # 以降は brightness/contrast 等の既存フローに渡す
