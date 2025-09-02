@@ -140,8 +140,8 @@ def build_default_char_colors():
 
 def main():
     p = argparse.ArgumentParser(description="Image -> ASCII (grayscale or color) with --auto shadow/highlight auto-correct")
-    p.add_argument("input", help="input image")
-    p.add_argument("output", help="output text file")
+    p.add_argument("--input", help="input image")
+    p.add_argument("--output", help="output text file")
     p.add_argument("--width", type=int, default=120, help="output width in characters")
     p.add_argument("--charset", type=str, default=None, help="characters from light to dark (grayscale only)")
     p.add_argument("--contrast", type=float, default=1.0, help="contrast multiplier")
