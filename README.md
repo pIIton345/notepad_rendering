@@ -15,7 +15,7 @@ windowsのメモ帳、notepad.exeで画像・動画を表示できる。
 `--width`横の文字数(ドット数)  
 `--color`カラー表示  
 
-`np-render.py`はメモ帳を更新するプログラム。
+`np-render.py`はテキストファイルが変更時メモ帳を更新するプログラム。
 # notepad.exeの設定
 ## フォント
 フォントはMSゴシック  
@@ -23,3 +23,6 @@ windowsのメモ帳、notepad.exeで画像・動画を表示できる。
 サイズは12  
 ## 表示サイズ
 10%
+
+# 参考
+https://gigazine.net/news/20221012-doom-notepad/
