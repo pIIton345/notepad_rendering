@@ -1,13 +1,13 @@
-venv
+venv/
 
-./src/image/
+src/image/
 
-./src/out.txt
+src/out.txt
 
-./src/output.txt
+src/output.txt
 
+src/out/
 
-*.txt
 *.png
 *.jpg
 *.mp4

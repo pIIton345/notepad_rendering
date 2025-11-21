@@ -1,0 +1,8 @@
+#np_render.pyに必要なライブラリ:pywin32
+#np_image.pyに必要なライブラリ:numpy,pillow
+#np_video.pyに必要なライブラリ:numpy,opencv-python
+
+numpy
+opencv-python
+pillow
+pywin32
