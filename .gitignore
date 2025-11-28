@@ -1,4 +1,5 @@
 venv/
+venv3.10/
 
 src/image/
 
@@ -7,6 +8,8 @@ src/out.txt
 src/output.txt
 
 src/out/
+
+src/DOOM/
 
 *.png
 *.jpg
