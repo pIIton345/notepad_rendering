@@ -1,6 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import argparse
 from PIL import Image, ImageOps, ImageEnhance
 import numpy as np

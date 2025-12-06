@@ -1,12 +1,3 @@
-#!/usr/bin/env python3
-# ascii_mixed_color_fast.py
-# Fast mixed Camera/Video -> ASCII (grayscale or color)
-# Requires: pip install opencv-python numpy
-# Notes:
-#  - Use smaller --width for faster results.
-#  - Default resize algo is bilinear (faster than bicubic).
-#  - Color mapping uses squared-distance and vectorized argmin.
-
 import argparse
 import threading
 import queue
