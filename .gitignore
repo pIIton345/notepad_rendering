@@ -11,6 +11,8 @@ src/out/
 
 src/DOOM/
 
+build/
+
 *.png
 *.jpg
 *.mp4

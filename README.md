@@ -1,28 +1,58 @@
 # notepad_rendering
 windowsのメモ帳、notepad.exeで画像・動画を表示できる。  
-新notepad.exeでも表示可能だが、旧notepad.exeのほうがきれいに表示できる。  
+旧notepad.exeを使うことでカラー画像を表示できる。
 テキストを10%表示にすると、文字が2ドットになってアンチエイリアスによって色がつく仕様を使った
 
-#　使い方  
-まず表示するためにテキストファイルを作成する。  
-次にテキストファイルをnotepad.exeで開く。  
-`np-render.py`をpythonで実行する  
-別ウィンドウで画像を表示するなら`np-image.py`、動画を再生するなら`np-video.py`をpythonで実行。  
+# 使い方
+1. テキストファイルを作成する。例としてout.txtとします。
+2. notepad.exeで作成したテキストファイルを開きます。
+3. コマンドプロンプトを開き、コマンドプロンプトでnp_render.py(np_render.exe)を実行する。
+4. 表示したいファイルが画像ならnp_image.py(np_image.exe)を実行、動画ならnp_video.py(np_video.exe)を実行することでテキストファイルに書き込まれ、notepad.exeに表示されます。
 
-`--help -h`ヘルプを表示  
-`--input`表示したい画像・動画ファイル  
-`--output`更新するテキストファイル  
-`--width`横の文字数(ドット数)  
-`--color`カラー表示  
+## np_render
+```
+np_render filepath
+# out.txtを開くなら
+np_render out.txt
+```
+notepad.txtで開いているテキストファイルと同じパスで設定ください
+## np_image
+```
+np_image --input [入力画像ファイルのパス]　--output [出力テキストファイルのパス]
+# 画像ファイルがinput.png、出力するテキストファイルがout.txtなら
+np_image --input input.png --output out.txt
+```
+### オプション
+```
+--width 横の文字数を指定できる(デフォルト200)
+--color カラー表示ができます。MSゴシックのみ
+--brightness 明るさを指定できる。
+--help ヘルプが表示できる
+```
+## np_video
+```
+np_video --input [入力動画ファイルのパス]　--output [出力テキストファイルのパス]
+# 画像ファイルがinput.mp4、出力するテキストファイルがout.txtなら
+# inputオプションが整数値の場合、カメラを指定できます。
+np_image --input input.mp4 --output out.txt
+```
+### オプション
+```
+--width 横の文字数を指定できる(デフォルト200)
+--color カラー表示ができます。MSゴシックのみ
+--brightness 明るさを指定できる。
+--drop-late 遅れたフレームをスキップして再生を滑らかにする。
+--help ヘルプが表示できる
 
-`np-render.py`はテキストファイルが変更時メモ帳を更新するプログラム。
+np_video.py --input input.mp4 --output out.txt --width 500 --drop_late 120000 --color
+```
+
 # notepad.exeの設定
 ## フォント
 フォントはMSゴシック  
 スタイルは標準  
-サイズは12  
-## 表示サイズ
-10%
+サイズは12
+表示サイズは10%
 
-# 参考
-https://gigazine.net/news/20221012-doom-notepad/
+# Qiita
+ここにQiita記事
