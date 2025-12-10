@@ -44,15 +44,28 @@ np_image --input input.mp4 --output out.txt
 --drop-late 遅れたフレームをスキップして再生を滑らかにする。
 --help ヘルプが表示できる
 
-np_video.py --input input.mp4 --output out.txt --width 500 --drop_late 120000 --color
+np_video --input input.mp4 --output out.txt --width 500 --drop_late 120000 --color
 ```
 
-# notepad.exeの設定
+# notepad.exeの推奨設定
 ## フォント
 フォントはMSゴシック  
 スタイルは標準  
 サイズは12
 表示サイズは10%
+
+# np_doom.py
+np_doom.pyはDOOMをnotepad.exeに表示できるスクリプトファイルです
+np_doom.pyはvisdoomを使用して作成していますのでvisdoomをインストールして実行してください
+またrequire.txtには書かれていません。
+
+```
+np_video --wad [wadファイルパス]　--output [出力テキストファイルのパス]
+# 画像ファイルがDOOM.WAD、出力するテキストファイルがout.txtなら
+# inputオプションが整数値の場合、カメラを指定できます。
+np_image --wad DOOM.WaaD --output out.txt
+```
+np_doom.pyのオプションはnp_video.pyとほぼ同じです。
 
 # Qiita
 ここにQiita記事
