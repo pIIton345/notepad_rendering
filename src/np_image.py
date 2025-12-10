@@ -126,13 +126,13 @@ def build_default_char_colors():
     ]
 def main():
     p = argparse.ArgumentParser(description="Image -> ASCII (grayscale or color) with --auto shadow/highlight auto-correct")
-    p.add_argument("--input",required=True, help="input image")
-    p.add_argument("--output",required=True, help="output text file")
-    p.add_argument("--width", type=int, default=120, help="output width in characters")
+    p.add_argument("--input",required=True, help="input image path")
+    p.add_argument("--output",required=True, help="output text file path")
+    p.add_argument("--width", type=int, default=120, help="output width in characters (smaller -> faster)")
     p.add_argument("--charset", type=str, default=None, help="characters from light to dark (grayscale only)")
     p.add_argument("--contrast", type=float, default=1.0, help="contrast multiplier")
     p.add_argument("--invert", action="store_true", help="invert brightness mapping")
-    p.add_argument("--color", action="store_true", help="enable color-based ASCII")
+    p.add_argument("--color", action="store_true", help="enable color mode")
     p.add_argument("--brightness", type=float, default=1.0, help="brightness multiplier (default=1.0)")
     p.add_argument("--auto", action="store_true", help="auto adjust shadows/highlights (avoid white clipping)")
     p.add_argument("--gamma", type=float, default=0.7, help="gamma used by --auto (default 0.7, <1 lifts shadows)")
