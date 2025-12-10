@@ -9,6 +9,10 @@ windowsのメモ帳、notepad.exeで画像・動画を表示できる。
 3. コマンドプロンプトを開き、コマンドプロンプトでnp_render.py(np_render.exe)を実行する。
 4. 表示したいファイルが画像ならnp_image.py(np_image.exe)を実行、動画ならnp_video.py(np_video.exe)を実行することでテキストファイルに書き込まれ、notepad.exeに表示されます。
 
+pythonスクリプトを実行する場合、必要なパッケージをインストールしてください。
+```
+pip install -r requirements.txt
+```
 ## np_render
 ```
 np_render filepath
@@ -34,7 +38,7 @@ np_image --input input.png --output out.txt
 np_video --input [入力動画ファイルのパス]　--output [出力テキストファイルのパス]
 # 画像ファイルがinput.mp4、出力するテキストファイルがout.txtなら
 # inputオプションが整数値の場合、カメラを指定できます。
-np_image --input input.mp4 --output out.txt
+np_video --input input.mp4 --output out.txt
 ```
 ### オプション
 ```
@@ -51,21 +55,22 @@ np_video --input input.mp4 --output out.txt --width 500 --drop_late 120000 --col
 ## フォント
 フォントはMSゴシック  
 スタイルは標準  
-サイズは12
+サイズは12  
 表示サイズは10%
 
-# np_doom.py
-np_doom.pyはDOOMをnotepad.exeに表示できるスクリプトファイルです
-np_doom.pyはvisdoomを使用して作成していますのでvisdoomをインストールして実行してください
-またrequire.txtには書かれていません。
-
+# np_doom
+np_doomはDOOMをnotepad.exeに表示できるスクリプトファイルです。  
+np_doomはvisdoomを使用して作成していますのでpython版を実行する場合はvisdoomをインストールしてください。 
+またrequire.txtにvisdoomは書かれていません。
 ```
-np_video --wad [wadファイルパス]　--output [出力テキストファイルのパス]
-# 画像ファイルがDOOM.WAD、出力するテキストファイルがout.txtなら
-# inputオプションが整数値の場合、カメラを指定できます。
-np_image --wad DOOM.WaaD --output out.txt
+np_doom --wad [wadファイルパス]　--output [出力テキストファイルのパス]
+```
+画像ファイルがDOOM.WAD、出力するテキストファイルがout.txtであれば
+```
+np_doom --wad DOOM.Wad --output out.txt
 ```
 np_doom.pyのオプションはnp_video.pyとほぼ同じです。
-
+操作は、十字キーが「移動」、Ctrlキー又は左クリックが「攻撃」、スペースキーで「使用する」  
+ゲーム内で終了をしないと適切に終了できません。
 # Qiita
 ここにQiita記事
