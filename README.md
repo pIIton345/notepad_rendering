@@ -5,9 +5,10 @@ windowsのメモ帳、notepad.exeで画像・動画を表示できる。
 
 # 使い方
 1. テキストファイルを作成する。例としてout.txtとします。
-2. notepad.exeで作成したテキストファイルを開きます。
-3. コマンドプロンプトを開き、コマンドプロンプトでnp_render.py(np_render.exe)を実行する。
-4. 表示したいファイルが画像ならnp_image.py(np_image.exe)を実行、動画ならnp_video.py(np_video.exe)を実行することでテキストファイルに書き込まれ、notepad.exeに表示されます。
+2. notepad.exeで作成したテキストファイルをnotepad.exeで開きます。
+3. notepad.exeの表示サイズは10%にする。
+4. コマンドプロンプトを開き、コマンドプロンプトでnp_render.py(np_render.exe)を実行する。
+5. 表示したいファイルが画像ならnp_image.py(np_image.exe)を実行、動画ならnp_video.py(np_video.exe)を実行することでテキストファイルに書き込まれ、notepad.exeに表示されます。
 
 pythonスクリプトを実行する場合、必要なパッケージをインストールしてください。
 ```
