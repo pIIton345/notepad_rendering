@@ -78,4 +78,4 @@ np_doom.pyのオプションはnp_video.pyとほぼ同じです。
 Windows11を使用の方は旧notepad.exeを使用してください。  
 
 # Qiita
-ここにQiita記事
+https://qiita.com/pIIton345/items/4a645f3a540b158658a7

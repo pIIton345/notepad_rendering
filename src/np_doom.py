@@ -25,7 +25,7 @@ SENTINEL = object()
 
 def parse_args():
     p = argparse.ArgumentParser(description="Fast Mixed Doom -> ASCII")
-    p.add_argument("--wad", help="input WAD file path")
+    p.add_argument("--wad", required=True,help="input WAD file path")
     p.add_argument("--output", required=True, help="output text file path")
     p.add_argument("--width", type=int, default=480, help="output width in characters (smaller -> faster)")
     p.add_argument("--workers", type=int, default=4, help="Number of worker threads for conversion (video only)")
