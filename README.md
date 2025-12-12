@@ -61,8 +61,8 @@ np_video --input input.mp4 --output out.txt --width 500 --drop_late 120000 --col
 
 # np_doom
 np_doomはDOOMをnotepad.exeに表示できるスクリプトファイルです。  
-np_doomはvisdoomを使用して作成していますのでpython版を実行する場合はvisdoomをインストールしてください。 
-またrequire.txtにvisdoomは書かれていません。
+np_doomはvizdoomを使用して作成していますのでpython版を実行する場合はvizdoomをインストールしてください。 
+またrequire.txtにvizdoomは書かれていません。
 ```
 np_doom --wad [wadファイルパス]　--output [出力テキストファイルのパス]
 ```

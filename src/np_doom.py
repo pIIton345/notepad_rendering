@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-# doom_ascii.py
-# Fast Doom -> ASCII (grayscale or color)
-# Requires: pip install opencv-python numpy vizdoom
-# Usage: python doom_ascii.py --wad doom1.wad --output out.txt --width 120 --color
-
 import argparse
 import threading
 import queue
