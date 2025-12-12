@@ -213,9 +213,36 @@ def camera_loop(cap, args, charset, out_width, frame_interval, char_array, color
 def init_doom(wad_path):
     print(f"[Doom] Initializing VizDoom with {wad_path}...")
     game = vzd.DoomGame()
-    game.set_doom_scenario_path(wad_path)
-    game.set_doom_map("map01")
-    
+        # 変更箇所：init_doom の冒頭付近
+    # wad_path が IWAD か PWAD かを判定して適切な API を呼ぶ
+    with open(wad_path, "rb") as f:
+        magic = f.read(4).decode("ascii", errors="ignore").upper()
+
+    if magic == "IWAD":
+        # 本体 IWAD を指定（DOOM / DOOM2 / etc）
+        game.set_doom_game_path(wad_path)
+    elif magic == "PWAD":
+        # シナリオ / mod 用の指定
+        game.set_doom_scenario_path(wad_path)
+    else:
+        # 不明なら従来互換でシナリオとして渡す（もしくはエラーにする）
+        game.set_doom_scenario_path(wad_path)
+
+
+    # wad_type 判定の後にマップを設定（上の IWAD 判定の直後あたり）
+    if magic == "IWAD":
+        lower_name = os.path.basename(wad_path).lower()
+        # 簡易判定：ファイル名に 'doom2' が含まれるなら Doom2
+        if "doom2" in lower_name:
+            game.set_doom_map("MAP01")   # Doom II の 1 面
+        else:
+            # Doom 1 系（DOOM.WAD 等）は E1M1 を指定
+            game.set_doom_map("E1M1")
+    else:    
+    # PWAD 等は map 名を固定しない・または config から渡す
+    # game.set_doom_map("MAP01")
+        pass
+
     # Set resolution low for performance (we resize anyway)
     game.set_screen_resolution(vzd.ScreenResolution.RES_320X240)
     # Use BGR24 to match OpenCV format
